@@ -32,16 +32,17 @@ export async function enrichCollaborators(
   if (collaborators.length === 0) return []
 
   const client = await clerkClient()
-  
+  type ClerkUser = Awaited<ReturnType<typeof client.users.getUserList>>["data"][number]
+
   // Batch emails into groups of 100 to avoid exceeding API limits
   const BATCH_SIZE = 100
   const emailBatches: string[][] = []
   for (let i = 0; i < collaborators.length; i += BATCH_SIZE) {
     emailBatches.push(collaborators.slice(i, i + BATCH_SIZE).map((c) => c.email))
   }
-  
+
   // Fetch users for all batches
-  const allUsers: typeof collaborators = []
+  const allUsers: ClerkUser[] = []
   for (const emailBatch of emailBatches) {
     const { data: users } = await client.users.getUserList({
       emailAddress: emailBatch,
