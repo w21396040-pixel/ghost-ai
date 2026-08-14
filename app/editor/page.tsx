@@ -1,6 +1,14 @@
-import { NewProjectButton } from "@/components/editor/new-project-button"
+import { redirect } from "next/navigation"
 
-export default function EditorPage() {
+import { NewProjectButton } from "@/components/editor/new-project-button"
+import { getCurrentIdentity } from "@/lib/project-access"
+
+export default async function EditorPage() {
+  const identity = await getCurrentIdentity()
+  if (!identity) {
+    redirect("/sign-in")
+  }
+
   return (
     <div className="flex size-full flex-col items-center justify-center gap-4 px-4 text-center">
       <div className="flex flex-col gap-1.5">

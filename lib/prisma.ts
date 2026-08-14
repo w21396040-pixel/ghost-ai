@@ -19,7 +19,10 @@ function createPrismaClient(): PrismaClient {
     return new PrismaClient({ accelerateUrl: databaseUrl })
   }
 
-  const pool = globalForPrisma.pgPool ?? new Pool({ connectionString: databaseUrl })
+  const pool = globalForPrisma.pgPool ?? new Pool({ 
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 5_000
+  })
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.pgPool = pool
   }
