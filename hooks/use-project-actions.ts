@@ -16,7 +16,15 @@ function generateSuffix() {
   return Math.random().toString(36).slice(2, 8)
 }
 
-export function useProjectActions() {
+interface UseProjectActionsOptions {
+  onProjectCreated?: (project: Project) => void
+  onProjectDeleted?: (projectId: string) => void
+}
+
+export function useProjectActions({
+  onProjectCreated,
+  onProjectDeleted,
+}: UseProjectActionsOptions = {}) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -67,6 +75,7 @@ export function useProjectActions() {
       const project = await response.json()
       setDialog(null)
       setName("")
+      onProjectCreated?.({ id: project.id, name: project.name, isOwner: true })
       router.push(`/editor/${project.id}`)
     } finally {
       setIsLoading(false)
@@ -107,6 +116,7 @@ export function useProjectActions() {
       if (!response.ok) return
 
       setDialog(null)
+      onProjectDeleted?.(project.id)
       if (pathname === `/editor/${project.id}`) {
         router.push("/editor")
       } else {

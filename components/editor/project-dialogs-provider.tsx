@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 
 import { useProjectActions, type UseProjectActionsReturn } from "@/hooks/use-project-actions"
 import type { Project } from "@/types/project"
@@ -23,9 +23,25 @@ export function ProjectDialogsProvider({
   sharedProjects,
   children,
 }: ProjectDialogsProviderProps) {
-  const actions = useProjectActions()
+  const [ownedProjectsState, setOwnedProjectsState] = useState(ownedProjects)
+
+  // Keep in sync with server-refreshed props (e.g. after rename/delete),
+  // while still allowing optimistic local appends on create.
+  useEffect(() => {
+    setOwnedProjectsState(ownedProjects)
+  }, [ownedProjects])
+
+  const actions = useProjectActions({
+    onProjectCreated: (project) =>
+      setOwnedProjectsState((prev) => [...prev, project]),
+    onProjectDeleted: (projectId) =>
+      setOwnedProjectsState((prev) => prev.filter((project) => project.id !== projectId)),
+  })
+
   return (
-    <ProjectDialogsContext.Provider value={{ ...actions, ownedProjects, sharedProjects }}>
+    <ProjectDialogsContext.Provider
+      value={{ ...actions, ownedProjects: ownedProjectsState, sharedProjects }}
+    >
       {children}
     </ProjectDialogsContext.Provider>
   )

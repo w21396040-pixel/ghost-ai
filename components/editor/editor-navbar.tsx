@@ -1,7 +1,7 @@
 "use client"
 
 import { UserButton } from "@clerk/nextjs"
-import { Layers, PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
+import { Layers, LayoutTemplate, PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
 
 import { useRoomChrome } from "@/components/editor/room-chrome-provider"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,8 @@ export function EditorNavbar({
   onToggleSidebar,
   className,
 }: EditorNavbarProps) {
-  const { room, isAiSidebarOpen, toggleAiSidebar, openShareDialog } = useRoomChrome()
+  const { room, isAiSidebarOpen, toggleAiSidebar, openShareDialog, openStarterTemplates } =
+    useRoomChrome()
 
   return (
     <header
@@ -56,6 +57,10 @@ export function EditorNavbar({
       <div className="flex flex-1 items-center justify-end gap-1.5">
         {room && (
           <>
+            <Button variant="ghost" size="sm" onClick={openStarterTemplates}>
+              <LayoutTemplate />
+              Templates
+            </Button>
             <Button variant="outline" size="sm" onClick={openShareDialog}>
               <Share2 />
               Share
