@@ -237,7 +237,7 @@ import 'dotenv/config'
 
 See individual rule files for detailed command documentation:
 
-```
+```text
 references/init.md           - Project initialization
 references/generate.md       - Client generation
 references/dev.md            - Local development database

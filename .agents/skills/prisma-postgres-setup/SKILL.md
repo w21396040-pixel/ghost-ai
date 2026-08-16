@@ -28,7 +28,7 @@ Do **not** use this skill when:
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20.19.0 or newer
 - A Prisma Postgres workspace (create one at https://console.prisma.io if needed)
 - A workspace service token (see `references/auth.md`)
 
@@ -46,7 +46,7 @@ You need a service token. Try these methods in order:
 
 **1a. Token in the user's prompt**
 
-Check if the user included a service token in their initial message (e.g., "Set up Prisma Postgres with token eyJ..."). If so, use it **exactly as provided** — do not truncate, re-encode, or round-trip it through a file. Store it in a shell variable for subsequent calls.
+Check if the user included a service token in their initial message (e.g., "Set up Prisma Postgres with token eyJ..."). If so, use it **exactly as provided** — do not truncate, re-encode, or round-trip it through a file.
 
 **1b. Token in the environment**
 
@@ -61,14 +61,40 @@ If no token is available, instruct the user:
 
 Read `references/auth.md` for details on service token creation.
 
-Once you have a token, store it in a shell variable (`PRISMA_SERVICE_TOKEN`) and use it for all subsequent API calls.
+**Handling the token securely:**
+
+When you have a token (from prompt, environment, or user input), use it for API calls while following these security practices:
+
+- **If prompting the user for the token**: Request hidden input (not logged or echoed in terminal output)
+- **When running shell commands with the token**: Disable shell history/tracing to avoid logging it
+  - Prefix your command with `( set +x; ... )` to temporarily disable `set -x`
+  - Use a temporary variable that you unset immediately after the final API call
+- **Do not display or log the token** in any output
+- **Service tokens remain valid until explicitly revoked** in Workspace Settings — rotation is optional
+
+**Example workflow** (using temporary variable with shell tracing disabled):
+
+```bash
+( set +x
+  read -sp 'Paste your PRISMA_SERVICE_TOKEN: ' token
+  # Use $token for API calls with timeouts and bounded retries
+  curl -s --fail-with-body \
+    --connect-timeout 10 --max-time 30 \
+    --retry 3 --retry-delay 1 --retry-max-time 10 \
+    -H "Authorization: Bearer $token" https://api.prisma.io/v1/projects
+  unset token
+)
+```
 
 ### Step 2: List available regions
 
 Fetch the list of available Prisma Postgres regions to let the user choose where to deploy.
 
 ```bash
-curl -s -H "Authorization: Bearer $PRISMA_SERVICE_TOKEN" \
+curl -s --fail-with-body \
+  --connect-timeout 10 --max-time 30 \
+  --retry 3 --retry-delay 1 --retry-max-time 10 \
+  -H "Authorization: Bearer $PRISMA_SERVICE_TOKEN" \
   https://api.prisma.io/v1/regions/postgres
 ```
 
@@ -81,7 +107,10 @@ Read `references/endpoints.md` for the full response shape.
 ### Step 3: Create a project with a database
 
 ```bash
-curl -s -X POST https://api.prisma.io/v1/projects \
+curl -s --fail-with-body \
+  --connect-timeout 10 --max-time 30 \
+  --retry 3 --retry-delay 1 --retry-max-time 10 \
+  -X POST https://api.prisma.io/v1/projects \
   -H "Authorization: Bearer $PRISMA_SERVICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -101,9 +130,30 @@ The response is wrapped in `{ "data": { ... } }`. Extract:
 
 Use the **direct** connection string (`endpoints.direct.connectionString`). Do not use the pooled or accelerate endpoints — those are for legacy Accelerate setups and not needed for new projects.
 
-If the response status is `provisioning`, wait a few seconds and poll `GET /v1/databases/<database-id>` until `status` is `ready`.
+If the response status is `provisioning`, implement a polling loop with these safeguards:
 
-**If creation fails due to a database limit**, list the user's existing projects and present them as an interactive menu for deletion. After the user picks one, delete it and retry.
+1. **Maximum deadline**: Set a timeout (e.g., 5 minutes) from the start of polling. Fail with an explicit error if the deadline is exceeded.
+2. **Exponential backoff**: Start with a 2-second delay, then increase by 1.5x after each poll (e.g., 2s, 3s, 4.5s, 6.75s, ...). Cap the maximum delay at 30 seconds.
+3. **Poll `GET /v1/databases/<database-id>`** and check the `status` field:
+   
+   ```bash
+   curl -s --fail-with-body \
+     --connect-timeout 10 --max-time 30 \
+     --retry 3 --retry-delay 1 --retry-max-time 10 \
+     -H "Authorization: Bearer $PRISMA_SERVICE_TOKEN" \
+     https://api.prisma.io/v1/databases/<database-id>
+   ```
+   
+   - **If `status` is `ready`**: Extract the connection string and proceed to Step 5.
+   - **If `status` is `failed` or `canceled`**: Stop immediately with an explicit error message (do not retry).
+   - **If `status` is still `provisioning`**: Wait for the next backoff interval and poll again.
+
+**If creation fails due to a database limit**, list the user's existing projects and present them as an interactive menu for selection. When displaying options, show the exact **project ID** and **database IDs** for each project. When the user selects a project:
+
+1. **Display the destructive impact immediately**: Show that deleting this project will also remove all associated databases and connections permanently, including the specific IDs (e.g., "Deleting project `proj_abc123` will also delete databases: `db_xyz789`, `db_uvw456`").
+2. **Request explicit confirmation immediately**: Ask the user to confirm this destructive action right before deletion (e.g., "Type 'delete proj_abc123' to confirm deletion, or cancel to proceed differently").
+3. **Only after explicit confirmation**: Proceed with deletion via `DELETE /v1/projects/<project-id>`, then retry the database creation.
+4. **Preserve polling behavior**: The existing polling loop for database provisioning status remains unchanged after successful project deletion and creation.
 
 Read `references/endpoints.md` for the full request/response shapes.
 
@@ -112,7 +162,10 @@ Read `references/endpoints.md` for the full request/response shapes.
 If you need a dedicated connection (e.g., per-developer or per-environment), create one:
 
 ```bash
-curl -s -X POST https://api.prisma.io/v1/databases/<database-id>/connections \
+curl -s --fail-with-body \
+  --connect-timeout 10 --max-time 30 \
+  --retry 3 --retry-delay 1 --retry-max-time 10 \
+  -X POST https://api.prisma.io/v1/databases/<database-id>/connections \
   -H "Authorization: Bearer $PRISMA_SERVICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{ "name": "dev" }'
@@ -125,31 +178,50 @@ Extract the direct connection string from `data.endpoints.direct.connectionStrin
 1. Install dependencies:
 
 ```bash
-npm install prisma @prisma/client @prisma/adapter-pg pg dotenv
+npm install prisma@7 @prisma/client@7 @prisma/adapter-pg@7 pg dotenv tsx
 ```
 
-All five packages are required:
-- `prisma` — CLI for migrations, schema push, client generation
-- `@prisma/client` — the generated query client
-- `@prisma/adapter-pg` — Prisma 7 driver adapter for direct PostgreSQL connections
+All six packages are required:
+- `prisma@7` — CLI for migrations, schema push, client generation (Prisma 7)
+- `@prisma/client@7` — the generated query client (Prisma 7)
+- `@prisma/adapter-pg@7` — Prisma 7 driver adapter for direct PostgreSQL connections
 - `pg` — Node.js PostgreSQL driver (used by the adapter)
 - `dotenv` — loads `.env` variables for `prisma.config.ts`
+- `tsx` — TypeScript executor for running `.ts` files directly
 
-2. Write the direct connection string to `.env`. **Append** to the file if it already exists — do not overwrite existing entries:
+After installation, regenerate the lock file to ensure all transitive dependencies are captured:
 
+```bash
+npm install
 ```
-DATABASE_URL="<direct-connection-string>"
-```
 
-3. Verify `.gitignore` includes `.env`. Create `.gitignore` if it does not exist. Warn the user if `.env` is not gitignored.
+2. **Before writing credentials**: Verify `.gitignore` includes `.env`. Create `.gitignore` if it does not exist.
+   - **If `.env` is NOT gitignored**: Abort and require explicit confirmation from the user (`--force` flag or manual `.gitignore` addition) before proceeding.
+   - **If `.env` IS gitignored**: Proceed to write the connection string.
+
+3. Write the direct connection string to `.env`:
+   - If `.env` already exists: **Update the existing `DATABASE_URL` entry** (replace the value if present) instead of appending duplicates.
+   - If `.env` does not exist: Create it with the new entry.
+   - After writing: Set restrictive file permissions (`600` on Unix/Linux or equivalent read-only for the user on Windows).
+
+   ```
+   DATABASE_URL="<direct-connection-string>"
+   ```
+   
+   Preserve all unrelated `.env` entries when updating.
 
 4. Ensure `package.json` has `"type": "module"` set (Prisma 7 generates ESM output).
 
 5. If `prisma/schema.prisma` does not exist, run `npx prisma init` to scaffold the project. This creates both `prisma/schema.prisma` and `prisma.config.ts`.
 
-6. Ensure `schema.prisma` has the `postgresql` provider and **no** `url` or `directUrl` in the datasource block (Prisma 7 manages connection URLs in `prisma.config.ts`, not in the schema):
+6. Ensure `schema.prisma` has the `postgresql` provider and **no** `url` or `directUrl` in the datasource block (Prisma 7 manages connection URLs in `prisma.config.ts`, not in the schema). Include a generator block with an explicit output path:
 
 ```prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
 datasource db {
   provider = "postgresql"
 }
@@ -210,17 +282,19 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
-const result = await prisma.$queryRawUnsafe('SELECT 1 as connected')
-console.log('Connected to Prisma Postgres:', result)
-
-await prisma.$disconnect()
-await pool.end()
+try {
+  const result = await prisma.$queryRawUnsafe('SELECT 1 as connected')
+  console.log('Connected to Prisma Postgres:', result)
+} finally {
+  await prisma.$disconnect()
+  await pool.end()
+}
 ```
 
 Run it:
 
 ```bash
-npx tsx test-connection.ts
+npx --no-install tsx test-connection.ts
 ```
 
 **Prisma 7 client instantiation rules:**

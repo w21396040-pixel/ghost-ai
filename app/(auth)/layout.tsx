@@ -23,7 +23,7 @@ const FEATURES = [
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex min-h-screen w-full overflow-auto">
       <div className="hidden w-1/2 shrink-0 flex-col justify-center gap-10 border-r border-border bg-card px-16 lg:flex">
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-2.5">

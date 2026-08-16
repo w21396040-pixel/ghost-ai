@@ -1,23 +1,10 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher([
-  `${process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL}(.*)`,
-  `${process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL}(.*)`,
-]);
-
-// API routes handle their own auth() checks and return 401/403 JSON directly
-// (see app/api/**) — auth.protect() would otherwise redirect or 404 unauthenticated
-// fetch requests instead of letting the route handler respond with JSON.
-const isApiRoute = createRouteMatcher(["/api(.*)"]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (isApiRoute(req)) {
-    return;
-  }
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
+// Auth is enforced per-route (pages, layouts, API routes, Server Functions)
+// rather than here — see app/page.tsx, app/editor/**, app/api/**. This
+// middleware only establishes the Clerk auth context for those checks;
+// see https://clerk.com/docs/guides/development/upgrading/upgrade-guides/migrate-from-create-route-matcher
+export default clerkMiddleware();
 
 export const config = {
   matcher: [

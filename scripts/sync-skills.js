@@ -12,7 +12,26 @@ if (!fs.existsSync(src)) {
   process.exit(0);
 }
 
-fs.rmSync(dest, { recursive: true, force: true });
-fs.cpSync(src, dest, { recursive: true });
+const tmp = `${dest}.tmp-${process.pid}`;
+const backup = `${dest}.bak-${process.pid}`;
+const destExists = fs.existsSync(dest);
+
+fs.rmSync(tmp, { recursive: true, force: true });
+fs.cpSync(src, tmp, { recursive: true });
+
+let movedToBackup = false;
+try {
+  if (destExists) {
+    fs.renameSync(dest, backup);
+    movedToBackup = true;
+  }
+  fs.renameSync(tmp, dest);
+} catch (err) {
+  if (movedToBackup) fs.renameSync(backup, dest);
+  throw err;
+} finally {
+  fs.rmSync(tmp, { recursive: true, force: true });
+  if (movedToBackup) fs.rmSync(backup, { recursive: true, force: true });
+}
 
 console.log(`sync-skills: synced ${src} -> ${dest}`);
