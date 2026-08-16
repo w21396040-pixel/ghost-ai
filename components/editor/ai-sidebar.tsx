@@ -15,7 +15,7 @@ export function AiSidebar({ isOpen, onClose, className }: AiSidebarProps) {
   return (
     <div
       data-open={isOpen}
-      inert={!isOpen ? "" : undefined}
+      inert={!isOpen}
       className={cn(
         "absolute top-3 right-3 bottom-3 z-40 flex w-72 translate-x-[calc(100%+0.75rem)] flex-col gap-4 rounded-2xl border border-border bg-popover/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 ease-in-out data-[open=true]:translate-x-0",
         className
