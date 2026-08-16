@@ -155,7 +155,13 @@ After `db pull`, consider:
 
 3. **Add relation names** for clarity:
    ```prisma
-   author User? @relation("PostAuthor", fields: [authorId], references: [id])
+   model Post {
+     author User? @relation("PostAuthor", fields: [authorId], references: [id])
+   }
+   
+   model User {
+     posts Post[] @relation("PostAuthor")
+   }
    ```
 
 4. **Add documentation**:

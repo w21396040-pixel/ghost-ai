@@ -169,7 +169,7 @@ const [user, post] = await prisma.$transaction([
 
 Detailed API documentation:
 
-```
+```text
 references/constructor.md        - PrismaClient constructor options
 references/model-queries.md      - CRUD operations
 references/query-options.md      - select, include, omit, where, orderBy

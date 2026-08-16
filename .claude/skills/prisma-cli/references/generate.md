@@ -147,7 +147,7 @@ prisma generate  # Runs all generators
 
 After running `prisma generate`, your output directory contains:
 
-```
+```text
 generated/
 ├── browser.ts
 ├── client.ts

@@ -70,6 +70,8 @@ export default async function Page() {
 
 For client-side conditional rendering based on auth state. `<Show>` covers both authentication checks and authorization (feature, plan, role, permission) in one component.
 
+⚠️ **Security Note:** `<Show>` is for **UI visibility only**, not a security boundary. Always enforce authorization and fetch sensitive data on the server. Use Server Components, `auth()`, Server Actions, or API routes for actual access control and data protection.
+
 **Authentication check:**
 
 ```tsx
@@ -119,7 +121,7 @@ import { Show } from '@clerk/nextjs'
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `undefined` userId in Server Component | Missing `await` | `await auth()` not `auth()` |
-| Auth not working on API routes | Missing matcher | Add `'/(api|trpc)(.*)'` to `proxy.ts` (Next.js <=15: `middleware.ts`) |
+| Auth not working on API routes | Missing matcher | Add `'/(api\|trpc)(.*)'` to `proxy.ts` (Next.js <=15: `middleware.ts`) |
 | Cache returns wrong user's data | Missing userId in key | Include `userId` in `unstable_cache` key |
 | Mutations bypass auth | Unprotected Server Action | Check `auth()` at start of action |
 | Wrong HTTP error code | Confused 401/403 | 401 = not signed in, 403 = no permission |

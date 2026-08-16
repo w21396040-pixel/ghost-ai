@@ -1,6 +1,7 @@
 "use client"
 
 import { FolderOpen, Pencil, Plus, Trash2, Users, X } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 
 import { useProjectDialogsContext } from "@/components/editor/project-dialogs-provider"
 import { Button } from "@/components/ui/button"
@@ -32,22 +33,63 @@ function EmptyState({
 
 function ProjectListItem({
   project,
+  isActive,
   onRename,
   onDelete,
 }: {
   project: Project
+  isActive?: boolean
   onRename?: (project: Project) => void
   onDelete?: (project: Project) => void
 }) {
+  const router = useRouter()
+
+  function openProject() {
+    router.push(`/editor/${project.id}`)
+  }
+
   return (
-    <div className="group flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 hover:bg-muted">
-      <span className="truncate text-sm text-foreground">{project.name}</span>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={openProject}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          openProject()
+        }
+      }}
+      className={cn(
+        "group flex cursor-pointer items-center justify-between gap-2 rounded-xl px-2.5 py-2 hover:bg-muted",
+        isActive && "bg-accent-primary/10"
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "size-1.5 shrink-0 rounded-full bg-accent-primary",
+            isActive ? "opacity-100" : "opacity-0"
+          )}
+        />
+        <span
+          className={cn(
+            "truncate text-sm",
+            isActive ? "font-medium text-accent-primary" : "text-foreground"
+          )}
+        >
+          {project.name}
+        </span>
+      </span>
       {project.isOwner && (
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={() => onRename?.(project)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRename?.(project)
+            }}
             aria-label={`Rename ${project.name}`}
           >
             <Pencil />
@@ -55,7 +97,10 @@ function ProjectListItem({
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={() => onDelete?.(project)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete?.(project)
+            }}
             aria-label={`Delete ${project.name}`}
           >
             <Trash2 />
@@ -71,6 +116,7 @@ export function ProjectSidebar({
   onClose,
   className,
 }: ProjectSidebarProps) {
+  const pathname = usePathname()
   const {
     ownedProjects,
     sharedProjects,
@@ -125,6 +171,7 @@ export function ProjectSidebar({
                     <ProjectListItem
                       key={project.id}
                       project={project}
+                      isActive={pathname === `/editor/${project.id}`}
                       onRename={openRenameDialog}
                       onDelete={openDeleteDialog}
                     />
@@ -138,7 +185,11 @@ export function ProjectSidebar({
               {sharedProjects.length > 0 ? (
                 <div className="flex flex-col gap-0.5 py-2">
                   {sharedProjects.map((project) => (
-                    <ProjectListItem key={project.id} project={project} />
+                    <ProjectListItem
+                      key={project.id}
+                      project={project}
+                      isActive={pathname === `/editor/${project.id}`}
+                    />
                   ))}
                 </div>
               ) : (

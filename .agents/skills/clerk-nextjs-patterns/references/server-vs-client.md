@@ -99,6 +99,8 @@ import { Show } from '@clerk/nextjs';
 </Show>
 ```
 
+⚠️ **Security Note:** `<Show>` is for **UI visibility only**, not a security boundary. Always enforce authorization and fetch sensitive data on the server. Use Server Components, `auth()`, Server Actions, or API routes for actual access control and data protection.
+
 > **Core 2 ONLY (skip if current SDK):** Use `<SignedIn>` and `<SignedOut>` components instead of `<Show>`.
 
 [Docs](https://clerk.com/docs/reference/nextjs/auth)
