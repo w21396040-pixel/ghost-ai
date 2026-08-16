@@ -26,6 +26,10 @@ export const NODE_COLORS = [
 
 export const DEFAULT_NODE_COLOR = NODE_COLORS[0]
 
+// Matches `ui-context.md`'s Canvas > Edge Style ("thin stroke, default edge
+// color #f8fafc").
+export const EDGE_COLOR = "#f8fafc"
+
 // Default drag-and-drop size per shape (matches the shape panel's spec:
 // rectangles wider than tall, circles square, diamonds sized up so a
 // centered label has room inside the diamond's inscribed area).
@@ -37,6 +41,10 @@ export const NODE_SHAPE_SIZES: Record<NodeShape, { width: number; height: number
   cylinder: { width: 120, height: 120 },
   hexagon: { width: 160, height: 100 },
 }
+
+// Resize floor — keeps a node from being shrunk into an unusably small box.
+export const MIN_NODE_WIDTH = 40
+export const MIN_NODE_HEIGHT = 40
 
 // DataTransfer MIME type used by the shape panel's drag payload.
 export const SHAPE_DRAG_MIME_TYPE = "application/x-ghost-shape"
@@ -54,4 +62,9 @@ export interface CanvasNodeData extends Record<string, unknown> {
 }
 
 export type CanvasNode = Node<CanvasNodeData, "canvasNode">
-export type CanvasEdge = Edge<Record<string, never>, "canvasEdge">
+
+export interface CanvasEdgeData extends Record<string, unknown> {
+  label: string
+}
+
+export type CanvasEdge = Edge<CanvasEdgeData, "canvasEdge">

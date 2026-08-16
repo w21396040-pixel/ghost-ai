@@ -17,6 +17,9 @@ interface RoomChromeContextValue {
   isShareDialogOpen: boolean
   openShareDialog: () => void
   closeShareDialog: () => void
+  isStarterTemplatesOpen: boolean
+  openStarterTemplates: () => void
+  closeStarterTemplates: () => void
 }
 
 const RoomChromeContext = createContext<RoomChromeContextValue | null>(null)
@@ -25,6 +28,7 @@ export function RoomChromeProvider({ children }: { children: React.ReactNode }) 
   const [room, setRoom] = useState<RoomInfo | null>(null)
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [isStarterTemplatesOpen, setIsStarterTemplatesOpen] = useState(false)
 
   return (
     <RoomChromeContext.Provider
@@ -37,6 +41,9 @@ export function RoomChromeProvider({ children }: { children: React.ReactNode }) 
         isShareDialogOpen,
         openShareDialog: () => setIsShareDialogOpen(true),
         closeShareDialog: () => setIsShareDialogOpen(false),
+        isStarterTemplatesOpen,
+        openStarterTemplates: () => setIsStarterTemplatesOpen(true),
+        closeStarterTemplates: () => setIsStarterTemplatesOpen(false),
       }}
     >
       {children}
