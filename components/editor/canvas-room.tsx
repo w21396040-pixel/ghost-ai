@@ -10,9 +10,14 @@ import {
 } from "@liveblocks/react/suspense"
 
 import { Canvas } from "@/components/editor/canvas"
+import { PresenceAvatars } from "@/components/editor/presence-avatars"
 
 import "@xyflow/react/dist/style.css"
 import "@liveblocks/react-ui/styles.css"
+// The app forces dark mode via `className="dark"` on <html> (app/layout.tsx),
+// not `prefers-color-scheme` — so the "attributes" dark stylesheet is the
+// matching variant, not the media-query one.
+import "@liveblocks/react-ui/styles/dark/attributes.css"
 import "@liveblocks/react-flow/styles.css"
 
 interface CanvasRoomProps {
@@ -60,7 +65,7 @@ class CanvasRenderErrorBoundary extends Component<
   }
 }
 
-function CanvasConnectionGuard() {
+function CanvasConnectionGuard({ roomId }: CanvasRoomProps) {
   const [hasConnectionError, setHasConnectionError] = useState(false)
 
   useErrorListener((error) => {
@@ -75,7 +80,10 @@ function CanvasConnectionGuard() {
 
   return (
     <ClientSideSuspense fallback={<CanvasLoading />}>
-      <Canvas />
+      <div className="relative size-full">
+        <Canvas projectId={roomId} />
+        <PresenceAvatars />
+      </div>
     </ClientSideSuspense>
   )
 }
@@ -83,9 +91,9 @@ function CanvasConnectionGuard() {
 export function CanvasRoom({ roomId }: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth" badgeLocation="bottom-right">
-      <RoomProvider id={roomId} initialPresence={{ cursor: null, isThinking: false }}>
+      <RoomProvider id={roomId} initialPresence={{ cursor: null, thinking: false }}>
         <CanvasRenderErrorBoundary>
-          <CanvasConnectionGuard />
+          <CanvasConnectionGuard roomId={roomId} />
         </CanvasRenderErrorBoundary>
       </RoomProvider>
     </LiveblocksProvider>

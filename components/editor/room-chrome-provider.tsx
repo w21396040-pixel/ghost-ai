@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState } from "react"
 
+import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
+
 interface RoomInfo {
   title: string
   projectId: string
@@ -20,6 +22,13 @@ interface RoomChromeContextValue {
   isStarterTemplatesOpen: boolean
   openStarterTemplates: () => void
   closeStarterTemplates: () => void
+  saveStatus: CanvasSaveStatus
+  setSaveStatus: (status: CanvasSaveStatus) => void
+  triggerSave: () => void
+  setTriggerSave: (fn: () => void) => void
+  // TEMPORARY diagnostic: see errorDetail in use-canvas-autosave.ts.
+  saveErrorDetail: string | null
+  setSaveErrorDetail: (detail: string | null) => void
 }
 
 const RoomChromeContext = createContext<RoomChromeContextValue | null>(null)
@@ -29,6 +38,9 @@ export function RoomChromeProvider({ children }: { children: React.ReactNode }) 
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isStarterTemplatesOpen, setIsStarterTemplatesOpen] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<CanvasSaveStatus>("idle")
+  const [triggerSave, setTriggerSaveState] = useState<() => void>(() => () => {})
+  const [saveErrorDetail, setSaveErrorDetail] = useState<string | null>(null)
 
   return (
     <RoomChromeContext.Provider
@@ -44,6 +56,12 @@ export function RoomChromeProvider({ children }: { children: React.ReactNode }) 
         isStarterTemplatesOpen,
         openStarterTemplates: () => setIsStarterTemplatesOpen(true),
         closeStarterTemplates: () => setIsStarterTemplatesOpen(false),
+        saveStatus,
+        setSaveStatus,
+        triggerSave,
+        setTriggerSave: (fn) => setTriggerSaveState(() => fn),
+        saveErrorDetail,
+        setSaveErrorDetail,
       }}
     >
       {children}

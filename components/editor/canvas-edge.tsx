@@ -120,6 +120,12 @@ export function CanvasEdgeRenderer({
   const label = data?.label ?? ""
   const isEditing = editingEdgeId === id
   const isBright = !!selected || hoveredEdgeId === id || isEditing
+  // Labels stay hidden until their edge is clicked (selected) or actively
+  // being edited, rather than permanently cluttering the canvas once set —
+  // clicking the line is what pops the label up. Double-click-to-edit still
+  // works on a hidden label via <ReactFlow onEdgeDoubleClick> in canvas.tsx,
+  // which fires from anywhere along the edge path itself, not this div.
+  const showLabel = isEditing || (!!selected && !!label)
 
   return (
     <>
@@ -140,7 +146,7 @@ export function CanvasEdgeRenderer({
           className="nodrag nopan nowheel absolute"
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            pointerEvents: isEditing || label ? "all" : "none",
+            pointerEvents: showLabel ? "all" : "none",
           }}
           onMouseEnter={() => onEdgeHover(id)}
           onMouseLeave={() => onEdgeHover(null)}
@@ -151,7 +157,7 @@ export function CanvasEdgeRenderer({
         >
           {isEditing ? (
             <EdgeLabelInput initialLabel={label} onCommit={(value) => onLabelChange(id, value.trim())} />
-          ) : label ? (
+          ) : showLabel ? (
             <span className="cursor-text rounded-full border border-border bg-popover/90 px-2.5 py-0.5 text-xs text-foreground shadow-sm backdrop-blur-sm">
               {label}
             </span>

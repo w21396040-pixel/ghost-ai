@@ -10,6 +10,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useStoreApi,
   type DefaultEdgeOptions,
   type EdgeMouseHandler,
 } from "@xyflow/react"
@@ -17,12 +18,15 @@ import { useLiveblocksFlow } from "@liveblocks/react-flow"
 import { useCanRedo, useCanUndo, useRedo, useUndo } from "@liveblocks/react"
 
 import { CanvasControls } from "@/components/editor/canvas-controls"
+import { CanvasCursors } from "@/components/editor/canvas-cursors"
 import { CanvasEdgeActionsProvider, CanvasEdgeRenderer } from "@/components/editor/canvas-edge"
 import { CanvasNodeActionsProvider, CanvasNodeRenderer } from "@/components/editor/canvas-node"
 import { useRoomChrome } from "@/components/editor/room-chrome-provider"
 import { ShapePanel } from "@/components/editor/shape-panel"
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
 import { StarterTemplatesModal } from "@/components/editor/starter-templates-modal"
+import { useCanvasAutosave } from "@/hooks/use-canvas-autosave"
+import { useCanvasLoad } from "@/hooks/use-canvas-load"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import {
   DEFAULT_NODE_COLOR,
@@ -57,9 +61,46 @@ function createNodeId(shape: NodeShape) {
   return `${shape}-${Date.now()}-${nodeIdCounter}`
 }
 
-function CanvasInner() {
+interface CanvasInnerProps {
+  projectId: string
+}
+
+function CanvasInner({ projectId }: CanvasInnerProps) {
   const reactFlowInstance = useReactFlow<CanvasNode, CanvasEdge>()
   const { screenToFlowPosition, zoomIn, zoomOut, fitView } = reactFlowInstance
+  const reactFlowStoreApi = useStoreApi()
+
+  // xyflow's internal `paneDragging` flag flips true on d3-zoom's own drag
+  // 'start' and is only reset on its 'end', which fires from a
+  // pointerup/mouseup that d3's own listener has to actually observe. If a
+  // real release happens somewhere that listener misses it — a drag that
+  // ends past the window edge, over a different app/monitor, an alt-tab
+  // mid-drag — 'end' never fires and paneDragging is stuck `true` for the
+  // rest of the session. @liveblocks/react-flow's <Cursors> silently skips
+  // every future presence broadcast while paneDragging is true (confirmed by
+  // reading its source), so a stuck flag here means live cursors just stop
+  // working with no error anywhere — this was reproduced and confirmed as
+  // the actual cause of current-issues.md's "cursor never shows" report.
+  // Any window-level pointerup/mouseup/blur means the mouse button is no
+  // longer held, full stop, regardless of which element received it — so
+  // force-resetting on it is always correct and never interrupts a
+  // genuinely still-active drag.
+  useEffect(() => {
+    const resetStuckPaneDragging = () => {
+      reactFlowStoreApi.setState((state) =>
+        state.paneDragging ? { paneDragging: false } : state
+      )
+    }
+    window.addEventListener("pointerup", resetStuckPaneDragging)
+    window.addEventListener("mouseup", resetStuckPaneDragging)
+    window.addEventListener("blur", resetStuckPaneDragging)
+    return () => {
+      window.removeEventListener("pointerup", resetStuckPaneDragging)
+      window.removeEventListener("mouseup", resetStuckPaneDragging)
+      window.removeEventListener("blur", resetStuckPaneDragging)
+    }
+  }, [reactFlowStoreApi])
+
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
@@ -72,7 +113,54 @@ function CanvasInner() {
   const canUndo = useCanUndo()
   const canRedo = useCanRedo()
 
-  const { isStarterTemplatesOpen, closeStarterTemplates } = useRoomChrome()
+  const {
+    isStarterTemplatesOpen,
+    closeStarterTemplates,
+    setSaveStatus,
+    setTriggerSave,
+    setSaveErrorDetail,
+  } = useRoomChrome()
+
+  // Loads the saved canvas snapshot into an empty room on mount (skipped if
+  // the room already has content), then gates autosave until that one-time
+  // decision has settled — so autosave can never fire before the load check
+  // has had a chance to run, which would risk overwriting a saved snapshot
+  // with a still-empty room.
+  const isCanvasLoaded = useCanvasLoad({ projectId, nodes, edges, onNodesChange, onEdgesChange })
+  const { status: saveStatus, save: triggerSaveNow, errorDetail: saveErrorDetail } = useCanvasAutosave({
+    projectId,
+    nodes,
+    edges,
+    enabled: isCanvasLoaded,
+  })
+
+  // Bridges save status and the manual-save trigger up to EditorNavbar's Save
+  // button/indicator, which sits outside this Liveblocks room tree — same
+  // cross-layout pattern RoomHeaderSync already uses for room
+  // title/projectId/isOwner. Reset to "idle"/no-op only on unmount (a
+  // separate effect, so the reset doesn't also fire on every intermediate
+  // status change) so a stale status or trigger can't leak into the navbar
+  // after leaving the room.
+  useEffect(() => {
+    setSaveStatus(saveStatus)
+  }, [saveStatus, setSaveStatus])
+
+  useEffect(() => {
+    setTriggerSave(triggerSaveNow)
+  }, [triggerSaveNow, setTriggerSave])
+
+  // TEMPORARY diagnostic bridge — see errorDetail in use-canvas-autosave.ts.
+  useEffect(() => {
+    setSaveErrorDetail(saveErrorDetail)
+  }, [saveErrorDetail, setSaveErrorDetail])
+
+  useEffect(() => {
+    return () => {
+      setSaveStatus("idle")
+      setTriggerSave(() => {})
+      setSaveErrorDetail(null)
+    }
+  }, [setSaveStatus, setTriggerSave, setSaveErrorDetail])
 
   const handleZoomIn = useCallback(() => {
     zoomIn({ duration: ZOOM_DURATION })
@@ -95,6 +183,23 @@ function CanvasInner() {
   useEffect(() => {
     nodesRef.current = nodes
   }, [nodes])
+
+  // xyflow's own `fitView` prop only fires the first time nodes go from
+  // empty to non-empty. Because the Liveblocks room always mounts with zero
+  // nodes until useCanvasLoad's fetch resolves, that first flip coincides
+  // with the user's own first drop on a brand new (still-empty) canvas
+  // rather than with the load — producing an unwanted auto-zoom on drop.
+  // Firing fitView manually, gated on the load finishing rather than on
+  // nodes changing, keeps the fit-to-saved-content behavior for existing
+  // projects without re-triggering on every later drop.
+  const hasFitViewedOnLoadRef = useRef(false)
+  useEffect(() => {
+    if (!isCanvasLoaded || hasFitViewedOnLoadRef.current) return
+    hasFitViewedOnLoadRef.current = true
+    if (nodesRef.current.length > 0) {
+      requestAnimationFrame(() => fitView())
+    }
+  }, [isCanvasLoaded, fitView])
 
   const handleNodeLabelChange = useCallback(
     (id: string, label: string) => {
@@ -212,7 +317,19 @@ function CanvasInner() {
         return
       }
 
-      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      // ShapePanel's setDragImage(preview, width / 2, height / 2) pins the
+      // drag ghost so the cursor always sits at its center, regardless of
+      // where inside the shape button the drag actually started — so
+      // event.clientX/Y is already the intended center of the dropped node.
+      // screenToFlowPosition accounts for the pane's bounding rect and the
+      // current pan/zoom, but returns the node's top-left position, so the
+      // half-size offset (in flow units, matching payload.width/height) has
+      // to be subtracted here to land the node's center on the cursor.
+      const center = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      const position = {
+        x: center.x - payload.width / 2,
+        y: center.y - payload.height / 2,
+      }
 
       const newNode: CanvasNode = {
         id: createNodeId(payload.shape),
@@ -251,7 +368,6 @@ function CanvasInner() {
             onEdgeDoubleClick={handleEdgeDoubleClick}
             connectionMode={ConnectionMode.Loose}
             colorMode="dark"
-            fitView
           >
             <Panel position="bottom-left">
               <CanvasControls
@@ -266,6 +382,7 @@ function CanvasInner() {
             </Panel>
             <Background bgColor="var(--background)" color="var(--border)" />
             <ShapePanel />
+            <CanvasCursors />
           </ReactFlow>
         </div>
         <StarterTemplatesModal
@@ -278,10 +395,14 @@ function CanvasInner() {
   )
 }
 
-export function Canvas() {
+interface CanvasProps {
+  projectId: string
+}
+
+export function Canvas({ projectId }: CanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner />
+      <CanvasInner projectId={projectId} />
     </ReactFlowProvider>
   )
 }
