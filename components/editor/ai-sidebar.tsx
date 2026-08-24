@@ -21,9 +21,9 @@ export function AiSidebar({ isOpen, onClose, className }: AiSidebarProps) {
   return (
     <div
       data-open={isOpen}
-      inert={!isOpen}
+      aria-hidden={!isOpen}
       className={cn(
-        "absolute top-3 right-3 bottom-3 z-40 flex w-96 translate-x-[calc(100%+0.75rem)] flex-col gap-3 rounded-2xl border border-border bg-popover/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 ease-in-out data-[open=true]:translate-x-0",
+        "absolute top-3 right-3 bottom-3 z-40 flex w-96 translate-x-[calc(100%+0.75rem)] flex-col gap-3 rounded-2xl border border-border bg-popover/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 ease-in-out data-[open=false]:pointer-events-none data-[open=true]:translate-x-0",
         className
       )}
     >
@@ -49,22 +49,30 @@ export function AiSidebar({ isOpen, onClose, className }: AiSidebarProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue="architect" className="flex min-h-0 flex-1 flex-col gap-3">
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="architect" className={cn("text-muted-foreground", activeTabClasses)}>
-            AI Architect
-          </TabsTrigger>
-          <TabsTrigger value="specs" className={cn("text-muted-foreground", activeTabClasses)}>
-            Specs
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="architect" className="flex min-h-0 flex-1 flex-col">
-          <AiArchitectPanel />
-        </TabsContent>
-        <TabsContent value="specs" className="flex min-h-0 flex-1 flex-col">
-          <SpecsPanel />
-        </TabsContent>
-      </Tabs>
+      {/* Mounted only while open, rather than always-mounted-and-hidden — so
+          every open starts from a fresh ScrollArea/Textarea/Tabs instance
+          instead of one that's been sitting inert off-screen accumulating
+          renders. Fixes current-issues.md's report of scroll/typing going
+          dead after the panel had been open for a while, recoverable only by
+          toggling it via the sparkle button. */}
+      {isOpen && (
+        <Tabs defaultValue="architect" className="flex min-h-0 flex-1 flex-col gap-3">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="architect" className={cn("text-muted-foreground", activeTabClasses)}>
+              AI Architect
+            </TabsTrigger>
+            <TabsTrigger value="specs" className={cn("text-muted-foreground", activeTabClasses)}>
+              Specs
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="architect" className="flex min-h-0 flex-1 flex-col">
+            <AiArchitectPanel />
+          </TabsContent>
+          <TabsContent value="specs" className="flex min-h-0 flex-1 flex-col">
+            <SpecsPanel />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   )
 }

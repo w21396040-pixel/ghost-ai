@@ -38,6 +38,35 @@ const CURSOR_COLORS = [
   "#0AC7B4", // teal
 ]
 
+// Idempotent feed creation, shared by every call site that needs a feed to
+// exist before publishing/reading from it (trigger/design-agent.ts's own
+// "ai-status-feed" and app/api/liveblocks-auth/route.ts's "ai-chat", per
+// 24-ai-presence-state's Architecture Decision: swallow exactly a 409 (feed
+// already exists) — never a bare catch-and-ignore.
+//
+// Deliberately checks `error.status === 409` structurally rather than
+// `error instanceof LiveblocksError`: @liveblocks/node ships both an ESM and
+// a CJS build (its package.json `exports` map has separate `import`/`require`
+// conditions), and confirmed live — this call site is the first place in the
+// app that runs `createFeed` from inside a Next.js/Turbopack route-handler
+// bundle rather than the Trigger.dev runtime `design-agent.ts` runs in — that
+// `instanceof` fails here even though the thrown error's own `.status` is
+// genuinely `409`: Turbopack resolves this module's `@liveblocks/node` import
+// to a different bundled copy than the one `client.createFeed()` throws from,
+// so the two `LiveblocksError` class references aren't `===`, and the
+// `instanceof` check silently rethrows a benign "already exists" as a hard
+// failure. A structural check has no such cross-module-identity dependency.
+export async function ensureFeed(client: Liveblocks, roomId: string, feedId: string) {
+  try {
+    await client.createFeed({ roomId, feedId })
+  } catch (error) {
+    const status = (error as { status?: unknown } | null)?.status
+    if (status !== 409) {
+      throw error
+    }
+  }
+}
+
 export function getCursorColor(userId: string): string {
   let hash = 0
   for (let i = 0; i < userId.length; i++) {

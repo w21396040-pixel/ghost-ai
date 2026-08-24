@@ -1,7 +1,8 @@
 import { currentUser } from "@clerk/nextjs/server"
 
-import { getCursorColor, getLiveblocksClient } from "@/lib/liveblocks"
+import { ensureFeed, getCursorColor, getLiveblocksClient } from "@/lib/liveblocks"
 import { checkProjectAccess, getCurrentIdentity } from "@/lib/project-access"
+import { AI_CHAT_FEED_ID } from "@/types/tasks"
 
 export async function POST(request: Request) {
   const identity = await getCurrentIdentity()
@@ -29,6 +30,15 @@ export async function POST(request: Request) {
   await liveblocks.updateRoom(roomId, {
     usersAccesses: { [identity.userId]: ["room:write"] },
   })
+
+  // Ensured here, not lazily from the chat panel, because this route always
+  // runs (and is awaited) before the client's room socket connects — so by
+  // the time useCreateFeedMessage()/useFeedMessages() can run client-side,
+  // "ai-chat" is guaranteed to already exist. The client SDK has no
+  // equivalent to @liveblocks/node's typed LiveblocksError for telling
+  // "already exists" apart from a real failure, so feed creation stays
+  // server-side rather than being called from the client hook.
+  await ensureFeed(liveblocks, roomId, AI_CHAT_FEED_ID)
 
   const user = await currentUser()
   const name = user?.fullName || identity.email || "Anonymous"

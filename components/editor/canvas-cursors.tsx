@@ -1,5 +1,6 @@
 "use client"
 
+import { Loader2 } from "lucide-react"
 import { useOther } from "@liveblocks/react"
 import { Cursors, type CursorsCursorProps } from "@liveblocks/react-flow"
 import { Cursor } from "@liveblocks/react-ui"
@@ -8,10 +9,24 @@ import { Cursor } from "@liveblocks/react-ui"
 // /api/liveblocks-auth's identifyUser call) rather than @liveblocks/react-ui's
 // default Cursor renderer, which resolves via useUser()/resolveUsers — a
 // mechanism this app hasn't configured, since presence.info already has
-// everything a cursor label needs.
+// everything a cursor label needs. `label` accepts a ReactNode, so a small
+// spinner is appended next to the name when this participant's own
+// presence.thinking is true (set for the AI agent while it's actively
+// generating) — hidden whenever it's false or absent, no separate state.
 function ParticipantCursor({ connectionId }: CursorsCursorProps) {
   const info = useOther(connectionId, (other) => other.info)
-  return <Cursor color={info.color} label={info.name} />
+  const isThinking = useOther(connectionId, (other) => other.presence.thinking)
+  return (
+    <Cursor
+      color={info.color}
+      label={
+        <span className="inline-flex items-center gap-1">
+          {info.name}
+          {isThinking && <Loader2 className="size-3 animate-spin" aria-hidden="true" />}
+        </span>
+      }
+    />
+  )
 }
 
 // Cursors (from @liveblocks/react-flow, the package's own documented

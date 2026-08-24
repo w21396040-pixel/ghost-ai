@@ -22,6 +22,12 @@ import "@liveblocks/react-flow/styles.css"
 
 interface CanvasRoomProps {
   roomId: string
+  // Rendered as a sibling of the canvas tree, inside RoomProvider but outside
+  // CanvasConnectionGuard's Suspense/error boundary — so room-scoped chrome
+  // (the AI sidebar) keeps working off Presence/Feed data even while the
+  // canvas itself is still connecting or has errored, per this chapter's
+  // "keep the rest of the sidebar usable" scope limit.
+  children?: ReactNode
 }
 
 function CanvasLoading() {
@@ -65,7 +71,7 @@ class CanvasRenderErrorBoundary extends Component<
   }
 }
 
-function CanvasConnectionGuard({ roomId }: CanvasRoomProps) {
+function CanvasConnectionGuard({ roomId }: { roomId: string }) {
   const [hasConnectionError, setHasConnectionError] = useState(false)
 
   useErrorListener((error) => {
@@ -88,13 +94,14 @@ function CanvasConnectionGuard({ roomId }: CanvasRoomProps) {
   )
 }
 
-export function CanvasRoom({ roomId }: CanvasRoomProps) {
+export function CanvasRoom({ roomId, children }: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth" badgeLocation="bottom-right">
       <RoomProvider id={roomId} initialPresence={{ cursor: null, thinking: false }}>
         <CanvasRenderErrorBoundary>
           <CanvasConnectionGuard roomId={roomId} />
         </CanvasRenderErrorBoundary>
+        {children}
       </RoomProvider>
     </LiveblocksProvider>
   )
