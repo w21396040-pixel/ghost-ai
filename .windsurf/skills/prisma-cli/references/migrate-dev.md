@@ -69,7 +69,7 @@ prisma db seed
 
 Created in `prisma/migrations/`:
 
-```
+```text
 prisma/migrations/
 ├── 20240115120000_add_users_table/
 │   └── migration.sql

@@ -46,7 +46,7 @@ You need a service token. Try these methods in order:
 
 **1a. Token in the user's prompt**
 
-Check if the user included a service token in their initial message (e.g., "Set up Prisma Postgres with token eyJ..."). If so, use it **exactly as provided** — do not truncate, re-encode, or round-trip it through a file.
+Check if the user included a service token in their initial message (e.g., "Set up Prisma Postgres with token eyJ..."). If so, assign it to `PRISMA_SERVICE_TOKEN` **exactly as provided** — do not truncate, re-encode, or round-trip it through a file — and reuse that same variable for every API call in this workflow, through the final request in Step 4.
 
 **1b. Token in the environment**
 
@@ -68,22 +68,25 @@ When you have a token (from prompt, environment, or user input), use it for API 
 - **If prompting the user for the token**: Request hidden input (not logged or echoed in terminal output)
 - **When running shell commands with the token**: Disable shell history/tracing to avoid logging it
   - Prefix your command with `( set +x; ... )` to temporarily disable `set -x`
-  - Use a temporary variable that you unset immediately after the final API call
+  - Assign it to `PRISMA_SERVICE_TOKEN` and reuse that same variable for every API call through Step 4; unset it only after the final API request
 - **Do not display or log the token** in any output
 - **Service tokens remain valid until explicitly revoked** in Workspace Settings — rotation is optional
 
-**Example workflow** (using temporary variable with shell tracing disabled):
+**Example workflow** (capturing into `PRISMA_SERVICE_TOKEN` with shell tracing disabled):
 
 ```bash
+read -sp 'Paste your PRISMA_SERVICE_TOKEN: ' PRISMA_SERVICE_TOKEN
+export PRISMA_SERVICE_TOKEN
+echo
 ( set +x
-  read -sp 'Paste your PRISMA_SERVICE_TOKEN: ' token
-  # Use $token for API calls with timeouts and bounded retries
+  # Use $PRISMA_SERVICE_TOKEN for API calls with timeouts and bounded retries
   curl -s --fail-with-body \
     --connect-timeout 10 --max-time 30 \
     --retry 3 --retry-delay 1 --retry-max-time 10 \
-    -H "Authorization: Bearer $token" https://api.prisma.io/v1/projects
-  unset token
+    -H "Authorization: Bearer $PRISMA_SERVICE_TOKEN" https://api.prisma.io/v1/projects
 )
+# Reuse $PRISMA_SERVICE_TOKEN unchanged for Steps 2-4, then:
+# unset PRISMA_SERVICE_TOKEN
 ```
 
 ### Step 2: List available regions

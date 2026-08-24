@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp \"C:/Users/Brendon/AppData/Local/Temp/claude/c--Users-Brendon-Desktop-ghost-ai/d5789f51-53a0-48dc-8808-f9cedc76dfce/scratchpad/verify-21.mjs\" C:/Users/Brendon/Desktop/ghost-ai/__verify-21.mjs)",
+      "Bash(node __verify-21.mjs)",
+      "Bash(rm -f __verify-21.mjs __cleanup-21.ts)",
+      "Bash(rm -rf app/dev-smoke-check-21 \"app/api/dev-smoke-check-21-auth\")",
+      "Bash(wmic process *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X PUT http://localhost:3000/api/projects/test/canvas -H \"Content-Type: application/json\" -d '{\"nodes\":[],\"edges\":[]}')"
+    ]
+  }
+}

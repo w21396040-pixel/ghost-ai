@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
-import { Prisma } from "@prisma/client"
+
+import { Prisma } from "@/app/generated/prisma/client"
 
 import {
   addCollaborator,
