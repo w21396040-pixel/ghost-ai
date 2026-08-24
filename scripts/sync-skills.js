@@ -28,7 +28,7 @@ try {
   fs.renameSync(tmp, dest);
 } catch (err) {
   if (movedToBackup) fs.renameSync(backup, dest);
-  throw err;
+  console.warn(`sync-skills: failed to sync ${src} -> ${dest}, skipping (${err.message})`);
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
   if (movedToBackup) fs.rmSync(backup, { recursive: true, force: true });
