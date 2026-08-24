@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "skills:sync": "node scripts/sync-skills.js",
-    "postinstall": "node scripts/sync-skills.js"
+    "postinstall": "prisma generate && node scripts/sync-skills.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.48",
