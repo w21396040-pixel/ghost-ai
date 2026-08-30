@@ -166,7 +166,7 @@ function buildPrompt(userPrompt: string, existingNodes: CanvasNode[], existingEd
         .join("\n")
     : "(no edges)"
 
-  return `You are Ghost AI, a system-design assistant that edits a collaborative architecture diagram in place.
+  return `You are Techno AI, a system-design assistant that edits a collaborative architecture diagram in place.
 
 Existing nodes on the canvas:
 ${existingNodeSummary}
@@ -421,7 +421,7 @@ export const designAgent = task({
 
     try {
       await ensureStatusFeed(client, roomId)
-      await publishStatus(client, roomId, "start", "Ghost AI is reading your prompt…")
+      await publishStatus(client, roomId, "start", "Techno AI is reading your prompt…")
       await client.setPresence(roomId, {
         userId: AI_AGENT_USER_ID,
         data: { cursor: null, thinking: true },
@@ -431,7 +431,7 @@ export const designAgent = task({
 
       const { nodes: existingNodes, edges: existingEdges } = await readCanvasSnapshot(client, roomId)
 
-      await publishStatus(client, roomId, "processing", "Ghost AI is designing the architecture…")
+      await publishStatus(client, roomId, "processing", "Techno AI is designing the architecture…")
 
       const apiKey = process.env.GOOGLE_AI_API_KEY
       if (!apiKey) {
@@ -470,14 +470,14 @@ export const designAgent = task({
       // the model produced it.
       await applyActions(client, roomId, [...addNodeActions, ...otherActions], positions)
 
-      await publishStatus(client, roomId, "complete", "Ghost AI finished updating the design.")
+      await publishStatus(client, roomId, "complete", "Techno AI finished updating the design.")
       logger.info("design-agent completed", { roomId, actionCount: actions.length })
     } catch (error) {
       logger.error("design-agent failed", {
         roomId,
         error: error instanceof Error ? error.message : String(error),
       })
-      await publishStatus(client, roomId, "error", "Ghost AI couldn't finish that request. Please try again.").catch(
+      await publishStatus(client, roomId, "error", "Techno AI couldn't finish that request. Please try again.").catch(
         () => {}
       )
       throw error

@@ -36,7 +36,7 @@ export function AiSidebar({ isOpen, onClose, className }: AiSidebarProps) {
             <h2 className="font-heading text-sm font-medium text-foreground">
               AI Workspace
             </h2>
-            <p className="text-xs text-muted-foreground">Collaborate with Ghost AI</p>
+            <p className="text-xs text-muted-foreground">Collaborate with Techno AI</p>
           </div>
         </div>
         <Button

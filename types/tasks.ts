@@ -1,12 +1,12 @@
 import { z } from "zod"
 
-// Shared identity for Ghost AI's autonomous room participant — used both
+// Shared identity for Techno AI's autonomous room participant — used both
 // server-side (trigger/design-agent.ts, setting presence/feed messages) and
 // client-side (hooks/use-ai-status.ts, matching the agent's own presence
 // entry among `useOthers()`), so the two sides can never drift on the raw
 // id/name strings.
 export const AI_AGENT_USER_ID = "ai-agent"
-export const AI_AGENT_NAME = "Ghost AI"
+export const AI_AGENT_NAME = "Techno AI"
 
 // The single Liveblocks feed every background task (design generation today,
 // spec generation later) publishes its progress to — one feed, reused across

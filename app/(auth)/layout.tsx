@@ -1,4 +1,4 @@
-import { FileText, Ghost, Share2, Sparkles } from "lucide-react";
+import { Cpu, FileText, Share2, Sparkles } from "lucide-react";
 
 const FEATURES = [
   {
@@ -28,10 +28,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-2.5">
             <span className="flex size-8 items-center justify-center rounded-md bg-accent-primary">
-              <Ghost className="size-5 text-accent-primary-foreground" />
+              <Cpu className="size-5 text-accent-primary-foreground" />
             </span>
             <span className="font-heading text-lg font-semibold text-foreground">
-              Ghost AI
+              Techno AI
             </span>
           </div>
           <div className="flex flex-col gap-4">
@@ -39,7 +39,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               Design systems at the speed of thought.
             </h1>
             <p className="text-sm text-muted-foreground">
-              Describe your architecture in plain English. Ghost AI maps it
+              Describe your architecture in plain English. Techno AI maps it
               to a shared canvas your whole team can refine in real time.
             </p>
           </div>

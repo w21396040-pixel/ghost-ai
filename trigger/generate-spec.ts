@@ -73,7 +73,7 @@ function buildPrompt(
     ? chatHistory.map((message) => `${message.sender}: ${message.content}`).join("\n")
     : "(no conversation)"
 
-  return `You are Ghost AI, writing a technical specification document for a system whose architecture was designed collaboratively on a canvas.
+  return `You are Techno AI, writing a technical specification document for a system whose architecture was designed collaboratively on a canvas.
 
 Canvas components:
 ${nodeSummary}

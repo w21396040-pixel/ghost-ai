@@ -195,7 +195,7 @@ export function AiArchitectPanel() {
           className="flex items-center gap-2 rounded-full border border-accent-ai/30 bg-accent-ai/10 px-3 py-1.5 text-xs font-medium text-accent-ai-text"
         >
           <Loader2 className="size-3.5 shrink-0 animate-spin" />
-          <span className="truncate">{status?.text || "Ghost AI is working…"}</span>
+          <span className="truncate">{status?.text || "Techno AI is working…"}</span>
         </div>
       )}
 
